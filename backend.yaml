@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smg-admin
+  namespace: default
+  labels:
+    app: smg-admin
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: smg-admin   # has to match .spec.template.metadata.labels
+  template:
+    metadata:
+      labels:
+        app: smg-admin # has to match .spec.selector.matchLabels
+    spec:
+      imagePullSecrets:
+        - name: harbor-secret
+      containers:
+        - name: smg-admin
+          image: registry.cn-hongkong.aliyuncs.com/my_docker_k8s/smg:v0.0.1
+          imagePullPolicy: Always
+          #args: [--spring.profiles.active=cluster]
+          ports:
+            - containerPort: 80
+              name: smg-admin
+          resources:
+            requests:
+              memory: 300Mi
+              cpu: 200m
+            limits:
+              memory: 512Mi
+              cpu: 400m
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: smg-admin
+  namespace: default
+  labels:
+    app: smg-admin
+spec:
+  ports:
+    - name: smg-admin
+      port: 80
+  selector:
+    app: smg-admin
+
+---
+#ingress
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: smg-admin # Ingress 的名称
+  namespace: default # 命名空间 接下来的部署都会使用这个命名空间
+spec:
+  rules:
+    - host: smg-admin.dev.richunitedtech.io # 通过 Ingress 映射的地址 , 需要通过host去配置,下面讲解
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: smg-admin # 这里对应着service 的 名字
+              servicePort: 80 # 对应着需要映射的service的端口
